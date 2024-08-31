@@ -3,13 +3,11 @@ package com.infoscap.shard.config;
 import com.infoscap.shard.router.DynamicDataSourceRouter;
 import com.zaxxer.hikari.HikariDataSource;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.boot.autoconfigure.orm.jpa.JpaProperties;
 import org.springframework.boot.orm.jpa.EntityManagerFactoryBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
-import org.springframework.jdbc.datasource.lookup.AbstractRoutingDataSource;
 import org.springframework.orm.jpa.JpaTransactionManager;
 import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -23,7 +21,7 @@ import java.util.Properties;
 @Configuration
 @EnableTransactionManagement
 @EnableJpaRepositories(
-        basePackages = "com.infoscap.shard.repository", // Replace with your repository package
+        basePackages = "com.infoscap.shard.repository",
         entityManagerFactoryRef = "dynamicEntityManagerFactory",
         transactionManagerRef = "dynamicTransactionManager"
 )
@@ -31,7 +29,6 @@ public class DataSourceConfig {
 
     @Bean(name = "shard1DataSource")
     public DataSource shard1DataSource() {
-        // Configure and return DataSource for Shard 1 (e.g., HikariDataSource)
         HikariDataSource dataSource = new HikariDataSource();
         dataSource.setJdbcUrl("jdbc:mysql://localhost:3306/shard1_db");
         dataSource.setUsername("root");
@@ -42,7 +39,6 @@ public class DataSourceConfig {
 
     @Bean(name = "shard2DataSource")
     public DataSource shard2DataSource() {
-        // Configure and return DataSource for Shard 2 (e.g., HikariDataSource)
         HikariDataSource dataSource = new HikariDataSource();
         dataSource.setJdbcUrl("jdbc:mysql://localhost:3306/shard2_db");
         dataSource.setUsername("root");
@@ -75,17 +71,51 @@ public class DataSourceConfig {
 
         LocalContainerEntityManagerFactoryBean em = builder
                 .dataSource(dataSource)
-                .packages("com.infoscap.shard.entity") // Replace with your entity package
+                .packages("com.infoscap.shard.entity")
                 .persistenceUnit("dynamic")
                 .build();
 
-        Properties jpaProperties = new Properties();
+        Map<String, Object> jpaProperties = new HashMap<>();
         jpaProperties.put("hibernate.dialect", "org.hibernate.dialect.MySQL8Dialect");
-        jpaProperties.put("hibernate.hbm2ddl.auto", "update");
+        jpaProperties.put("hibernate.hbm2ddl.auto", "none");
         jpaProperties.put("hibernate.show_sql", "true");
-        em.setJpaProperties(jpaProperties);
+        em.setJpaPropertyMap(jpaProperties);
 
         return em;
+    }
+
+    @Bean(name = "shard1EntityManagerFactory")
+    public LocalContainerEntityManagerFactoryBean shard1EntityManagerFactory(
+            EntityManagerFactoryBuilder builder, @Qualifier("shard1DataSource") DataSource dataSource) {
+
+        Map<String, Object> jpaProperties = new HashMap<>();
+        jpaProperties.put("hibernate.dialect", "org.hibernate.dialect.MySQL8Dialect");
+        jpaProperties.put("hibernate.hbm2ddl.auto", "create");
+        jpaProperties.put("hibernate.show_sql", "true");
+
+        return builder
+                .dataSource(dataSource)
+                .packages("com.infoscap.shard.entity")
+                .persistenceUnit("shard1")
+                .properties(jpaProperties) // Use .properties instead of .setJpaProperties
+                .build();
+    }
+
+    @Bean(name = "shard2EntityManagerFactory")
+    public LocalContainerEntityManagerFactoryBean shard2EntityManagerFactory(
+            EntityManagerFactoryBuilder builder, @Qualifier("shard2DataSource") DataSource dataSource) {
+
+        Map<String, Object> jpaProperties = new HashMap<>();
+        jpaProperties.put("hibernate.dialect", "org.hibernate.dialect.MySQL8Dialect");
+        jpaProperties.put("hibernate.hbm2ddl.auto", "create");
+        jpaProperties.put("hibernate.show_sql", "true");
+
+        return builder
+                .dataSource(dataSource)
+                .packages("com.infoscap.shard.entity")
+                .persistenceUnit("shard2")
+                .properties(jpaProperties) // Use .properties instead of .setJpaProperties
+                .build();
     }
 
     @Primary
@@ -93,5 +123,17 @@ public class DataSourceConfig {
     public PlatformTransactionManager dynamicTransactionManager(
             @Qualifier("dynamicEntityManagerFactory") LocalContainerEntityManagerFactoryBean dynamicEntityManagerFactory) {
         return new JpaTransactionManager(dynamicEntityManagerFactory.getObject());
+    }
+
+    @Bean(name = "shard1TransactionManager")
+    public PlatformTransactionManager shard1TransactionManager(
+            @Qualifier("shard1EntityManagerFactory") LocalContainerEntityManagerFactoryBean shard1EntityManagerFactory) {
+        return new JpaTransactionManager(shard1EntityManagerFactory.getObject());
+    }
+
+    @Bean(name = "shard2TransactionManager")
+    public PlatformTransactionManager shard2TransactionManager(
+            @Qualifier("shard2EntityManagerFactory") LocalContainerEntityManagerFactoryBean shard2EntityManagerFactory) {
+        return new JpaTransactionManager(shard2EntityManagerFactory.getObject());
     }
 }
