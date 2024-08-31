@@ -3,6 +3,7 @@ package com.infoscap.shard.config;
 import com.infoscap.shard.router.DynamicDataSourceRouter;
 import com.zaxxer.hikari.HikariDataSource;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.orm.jpa.EntityManagerFactoryBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -16,7 +17,6 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 import javax.sql.DataSource;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Properties;
 
 @Configuration
 @EnableTransactionManagement
@@ -27,23 +27,55 @@ import java.util.Properties;
 )
 public class DataSourceConfig {
 
+
+    @Value("${datasource.shard1.url}")
+    private String shard1Url;
+
+    @Value("${datasource.shard1.username}")
+    private String shard1Username;
+
+    @Value("${datasource.shard1.password}")
+    private String shard1Password;
+
+    @Value("${datasource.shard1.driver-class-name}")
+    private String shard1DriverClassName;
+
+    @Value("${datasource.shard2.url}")
+    private String shard2Url;
+
+    @Value("${datasource.shard2.username}")
+    private String shard2Username;
+
+    @Value("${datasource.shard2.password}")
+    private String shard2Password;
+
+    @Value("${datasource.shard2.driver-class-name}")
+    private String shard2DriverClassName;
+
+
+
+
+
+
+
+
     @Bean(name = "shard1DataSource")
     public DataSource shard1DataSource() {
         HikariDataSource dataSource = new HikariDataSource();
-        dataSource.setJdbcUrl("jdbc:mysql://localhost:3306/shard1_db");
-        dataSource.setUsername("root");
-        dataSource.setPassword("");
-        dataSource.setDriverClassName("com.mysql.cj.jdbc.Driver");
+        dataSource.setJdbcUrl(shard1Url);
+        dataSource.setUsername(shard1Username);
+        dataSource.setPassword(shard1Password);
+        dataSource.setDriverClassName(shard1DriverClassName);
         return dataSource;
     }
 
     @Bean(name = "shard2DataSource")
     public DataSource shard2DataSource() {
         HikariDataSource dataSource = new HikariDataSource();
-        dataSource.setJdbcUrl("jdbc:mysql://localhost:3306/shard2_db");
-        dataSource.setUsername("root");
-        dataSource.setPassword("");
-        dataSource.setDriverClassName("com.mysql.cj.jdbc.Driver");
+        dataSource.setJdbcUrl(shard2Url);
+        dataSource.setUsername(shard2Username);
+        dataSource.setPassword(shard2Password);
+        dataSource.setDriverClassName(shard2DriverClassName);
         return dataSource;
     }
 
@@ -90,7 +122,7 @@ public class DataSourceConfig {
 
         Map<String, Object> jpaProperties = new HashMap<>();
         jpaProperties.put("hibernate.dialect", "org.hibernate.dialect.MySQL8Dialect");
-        jpaProperties.put("hibernate.hbm2ddl.auto", "create");
+        jpaProperties.put("hibernate.hbm2ddl.auto", "update");
         jpaProperties.put("hibernate.show_sql", "true");
 
         return builder
@@ -107,7 +139,7 @@ public class DataSourceConfig {
 
         Map<String, Object> jpaProperties = new HashMap<>();
         jpaProperties.put("hibernate.dialect", "org.hibernate.dialect.MySQL8Dialect");
-        jpaProperties.put("hibernate.hbm2ddl.auto", "create");
+        jpaProperties.put("hibernate.hbm2ddl.auto", "update");
         jpaProperties.put("hibernate.show_sql", "true");
 
         return builder

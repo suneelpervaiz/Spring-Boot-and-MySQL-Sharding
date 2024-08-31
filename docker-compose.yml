@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  shard1:
+    image: mysql:8.0
+    container_name: shard1
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: shard1_db
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data_shard1:/var/lib/mysql
+    networks:
+      - shard-network
+
+  shard2:
+    image: mysql:8.0
+    container_name: shard2
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: shard2_db
+    ports:
+      - "3308:3306"
+    volumes:
+      - mysql_data_shard2:/var/lib/mysql
+    networks:
+      - shard-network
+
+  spring-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: spring-sharding-app
+    container_name: spring-sharding-app
+    depends_on:
+      - shard1
+      - shard2
+    ports:
+      - "8080:8080"
+    environment:
+      DATASOURCE_SHARD1_URL: jdbc:mysql://shard1:3306/shard1_db
+      DATASOURCE_SHARD1_USERNAME: root
+      DATASOURCE_SHARD1_PASSWORD: password
+      DATASOURCE_SHARD1_DRIVER_CLASS_NAME: com.mysql.cj.jdbc.Driver
+      DATASOURCE_SHARD2_URL: jdbc:mysql://shard2:3306/shard2_db
+      DATASOURCE_SHARD2_USERNAME: root
+      DATASOURCE_SHARD2_PASSWORD: password
+      DATASOURCE_SHARD2_DRIVER_CLASS_NAME: com.mysql.cj.jdbc.Driver
+    networks:
+      - shard-network
+
+volumes:
+  mysql_data_shard1:
+  mysql_data_shard2:
+
+networks:
+  shard-network:
+    driver: bridge
